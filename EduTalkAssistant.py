@@ -94,17 +94,7 @@ class EduTalkAssistant:
 
         def response_thread():
             self.ui.set_speaking(True)
-
             full_response = self.ollama.generate_response(user_input, self.speak_chunk)
-            full_response = re.sub(
-                r"<think>.*?</think>",
-                "",
-                full_response,
-                flags=re.DOTALL
-            ) # rm the <think> part if exists
-
-            print(full_response)
-
             self.ui.set_speaking(False)
             self.ui.display_message(full_response)
             time.sleep(1)
