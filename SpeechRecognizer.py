@@ -1,8 +1,10 @@
 import whisper
 
+
 # Supporting Classes
 class SpeechRecognizer:
     """Handles speech recognition using Whisper"""
+
     def __init__(self, config):
         self.config = config
         self.model = None
@@ -22,7 +24,7 @@ class SpeechRecognizer:
             transcript = self.model.transcribe(
                 audio_data,
                 language=self.config.whisper.lang,
-                fp16=self.config.whisper.use_fp16
+                fp16=self.config.whisper.use_fp16,
             )
             return transcript["text"].strip()
         except Exception as e:

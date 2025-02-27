@@ -4,17 +4,18 @@ import numpy as np
 AUDIO_CONFIG = {
     "CHANNELS": 1,
     "RATE": 16000,
-    "CHUNK": 512  # Reduced chunk size for lower latency
+    "CHUNK": 512,  # Reduced chunk size for lower latency
 }
 
 
 class AudioHandler:
     """Handles audio recording using sounddevice"""
+
     def __init__(self):
         self.frames = []
         self.latest_frame = None
         self.stream = None
-        self.dtype = 'int16'
+        self.dtype = "int16"
         self.channels = AUDIO_CONFIG["CHANNELS"]
         self.rate = AUDIO_CONFIG["RATE"]
         self.chunk = AUDIO_CONFIG["CHUNK"]
@@ -33,7 +34,7 @@ class AudioHandler:
             channels=self.channels,
             dtype=self.dtype,
             blocksize=self.chunk,
-            callback=self.callback
+            callback=self.callback,
         )
         self.stream.start()
 

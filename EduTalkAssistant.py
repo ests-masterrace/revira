@@ -14,12 +14,14 @@ import pygame
 AUDIO_CONFIG = {
     "CHANNELS": 1,
     "RATE": 16000,
-    "CHUNK": 512  # Reduced chunk size for lower latency
+    "CHUNK": 512,  # Reduced chunk size for lower latency
 }
+
 
 # Main Assistant Class
 class EduTalkAssistant:
     """Main class coordinating all components"""
+
     def __init__(self, config_path=None):
         self.config = ConfigLoader.load(config_path)
         self.audio_handler = AudioHandler()
@@ -59,20 +61,19 @@ class EduTalkAssistant:
             self.ui.set_recording(True)
             self.audio_handler.start_recording()
 
-
     def stop_recording(self):
         if self.is_recording:
             self.is_recording = False
             self.ui.set_recording(False)
             self.ui.display_message(self.config.messages.processing)
             audio_data = self.audio_handler.stop_recording()
-            
+
             if len(audio_data) < AUDIO_CONFIG["RATE"] * 0.5:
                 self.ui.display_message(self.config.messages.no_audio)
                 time.sleep(1)
                 self.ui.display_message(self.config.messages.ready)
                 return
-            
+
             self.ui.display_message(self.config.messages.processing)
             transcription = self.speech_recognizer.transcribe(audio_data)
             print(f"Transcription result: '{transcription}'")  # Debug output
@@ -87,7 +88,6 @@ class EduTalkAssistant:
         self.ui.set_speaking(True)
         self.ui.display_message(text_chunk)
         self.tts.speak(text_chunk, self.ui.display_waveform)
-
 
     def generate_response(self, user_input):
         """Generates a response using the Ollama API."""
@@ -104,7 +104,6 @@ class EduTalkAssistant:
         self.speech_thread.daemon = True
         self.speech_thread.start()
 
-    
     def stop_speaking(self):
         if self.ui.is_speaking:
             self.tts.stop()
@@ -133,9 +132,9 @@ class EduTalkAssistant:
             return  # Skip if already shut down
         self.has_shutdown = True  # Mark as shut down
         self.is_running = False
-        if hasattr(self, 'tts'):
+        if hasattr(self, "tts"):
             self.tts.stop()  # Stop text-to-speech
-        if hasattr(self, 'audio_handler'):
+        if hasattr(self, "audio_handler"):
             self.audio_handler.cleanup()  # Clean up audio resources
         pygame.quit()  # Uninitialize Pygame
         print(self.config.messages.exit_message)  # Display exit message
