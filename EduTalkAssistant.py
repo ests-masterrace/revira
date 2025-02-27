@@ -138,15 +138,6 @@ class EduTalkAssistant:
             elif action == "stop_speaking":
                 self.stop_speaking()
 
-#    def shutdown(self):
-#        self.is_running = False
-#        if hasattr(self, 'tts'):
-#            self.tts.stop()
-#        if hasattr(self, 'audio_handler'):
-#            self.audio_handler.cleanup()
-#        pygame.quit()
-#        print(self.config.messages.exit_message)
-
     def shutdown(self):
         if self.has_shutdown:
             return  # Skip if already shut down
