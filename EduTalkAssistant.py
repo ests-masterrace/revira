@@ -4,12 +4,26 @@ from AudioHandler import AudioHandler
 from SpeechRecognizer import SpeechRecognizer
 from OllamaConnector import OllamaConnector
 from TextToSpeech import TextToSpeech
+from ConversationConfig import ConversationConfig
+
+import chromadb
+from rag.rag import (
+    EMBED_MODEL,
+    read_txtf,
+    read_pdf,
+    read_png,
+    chunk_splitter,
+    get_embedding,
+)
 
 import time
 import requests
 import re
 import threading
 import pygame
+import tkinter as tk
+from tkinter import filedialog
+import ollama
 
 AUDIO_CONFIG = {
     "CHANNELS": 1,
@@ -34,6 +48,7 @@ class EduTalkAssistant:
         self.is_recording = False
         self.speech_thread = None
         self.has_shutdown = False
+        self.tt_data = "No timetable data."
 
     def status_update(self, message):
         print(f"\t:> {message}")
@@ -76,13 +91,29 @@ class EduTalkAssistant:
 
             self.ui.display_message(self.config.messages.processing)
             transcription = self.speech_recognizer.transcribe(audio_data)
-            print(f"Transcription result: '{transcription}'")  # Debug output
+            # DEBUG
+            # print(f"Transcription result: '{transcription}'")
             if not transcription or transcription.startswith("Error:"):
                 self.ui.display_message("Couldn't understand audio")
                 time.sleep(2)
                 self.ui.display_message(self.config.messages.ready)
                 return
-            self.generate_response(transcription)
+
+            chromaclient = chromadb.HttpClient(host="localhost", port=8000)
+            collection = chromaclient.get_or_create_collection(name="user_tt")
+
+            queryembed = ollama.embed(model=EMBED_MODEL, input=transcription)["embeddings"]
+
+            self.tt_data = "\n\n".join(
+                collection.query(query_embeddings=queryembed, n_results=10)[
+                    "documents"
+                ][0]
+            )
+            self.tt_data = "[Timetable data:\n" + self.tt_data + "]"
+            sys_prompt = ConversationConfig.system_prompt
+            prompt = sys_prompt.replace("<query>", transcription)
+            prompt = re.sub(r"\[(.*?)\]", self.tt_data, prompt, count=1)
+            self.generate_response(prompt)
 
     def speak_chunk(self, text_chunk):
         self.ui.set_speaking(True)
@@ -109,6 +140,13 @@ class EduTalkAssistant:
             self.tts.stop()
             self.ui.set_speaking(False)
 
+    def upload_file(self):
+        root = tk.Tk()
+        root.withdraw()  # Hide the main window
+        file_path = filedialog.askopenfilename(title="Select timetable file...")
+        root.destroy()
+        return file_path
+
     def run(self):
         if not self.initialize():
             return
@@ -126,6 +164,66 @@ class EduTalkAssistant:
                 self.stop_recording()
             elif action == "stop_speaking":
                 self.stop_speaking()
+            elif action == "upload_file":
+                print("Upload img/pdf file...")
+                path = self.upload_file()
+                if path:
+                    print(f">>>> Selected file: {path}")
+                    if path:  # TODO: Make a separate function
+                        chromaclient = chromadb.HttpClient(host="localhost", port=8000)
+                        text_content = ""
+                        if path.endswith(".pdf"):
+                            text_content = read_pdf(path)
+                        elif path.endswith(".txt"):
+                            text_content = read_txtf(path)
+                        elif path.endswith(".png"):
+                            text_content = read_png(path)
+                        else:
+                            print(">>>> Selected file is not supported.")
+                            print(">>>>\tSupported filetypes are: PDF, PNG, TXT.")
+
+                        if text_content:
+                            # collection = chromaclient.get_or_create_collection(
+                            #     name="user_tt",
+                            #     metadata={"hnsw:space": "cosine"},
+                            # )
+                            # if any(
+                            #     coll.name == "user_tt"
+                            #     for coll in chromaclient.list_collections()
+                            # ):
+                            #     chromaclient.delete_collection("user_tt")
+                            #     collection = chromaclient.get_or_create_collection(
+                            #         name="user_tt",
+                            #         metadata={"hnsw:space": "cosine"},
+                            #     )
+
+                            collection = chromaclient.get_or_create_collection(
+                                name="user_tt",
+                                metadata={"hnsw:space": "cosine"},
+                            )
+                            try:
+                                chromaclient.get_collection("user_tt")
+                                chromaclient.delete_collection("user_tt")
+                                collection = chromaclient.get_or_create_collection(
+                                    name="user_tt",
+                                    metadata={"hnsw:space": "cosine"},
+                                )
+                            except ValueError:
+                                pass
+
+                            chunks = chunk_splitter(text_content)
+                            embeds = get_embedding(chunks)
+                            chunknumber = list(range(len(chunks)))
+                            ids = [f"tt_{path}_{i}" for i in chunknumber]
+                            metadatas = [{"source": path} for _ in chunknumber]
+
+                            collection.add(
+                                ids=ids,
+                                documents=chunks,
+                                embeddings=embeds,
+                                metadatas=metadatas,
+                            )
+                            print(f"embedding the the file: '{path}' with success.")
 
     def shutdown(self):
         if self.has_shutdown:

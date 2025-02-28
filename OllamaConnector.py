@@ -18,7 +18,7 @@ class OllamaConnector:
                 "stream": True,
                 "context": self.context,
                 "prompt": prompt,
-                "system": self.config.conversation.system_prompt,
+                # "system": self.config.conversation.system_prompt,
             }
             response = requests.post(
                 self.config.ollama.url,

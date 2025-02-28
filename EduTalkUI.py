@@ -3,6 +3,7 @@ import pygame
 import time
 import numpy as np
 
+
 DEFAULT_PATHS = {
     "CONFIG": "assistant.yaml",
     "ICON": "image.png",
@@ -91,6 +92,8 @@ class EduTalkUI:
                 elif event.key == pygame.K_q and self.flashcard_mode:
                     self.flashcard_mode = False
                     self.display_message(self.config.messages.ready)
+                elif event.key == pygame.K_u:
+                    return "upload_file"
             elif event.type == pygame.KEYUP:
                 if (
                     event.key == pygame.K_SPACE
