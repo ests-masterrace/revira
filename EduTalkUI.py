@@ -200,12 +200,12 @@ class EduTalkUI:
         self.window.blit(button_text, text_rect)
 
     def _draw_text(
-        self, text, center_x, center_y, font=None, color=COLORS["TEXT_PRIMARY"]
+        self, text: str, center_x, center_y, font=None, color=COLORS["TEXT_PRIMARY"]
     ):
         if font is None:
             font = self.large_font
         max_width = self.window.get_width() - 80
-        words = text.split(" ")
+        words = text.split(" ") if hasattr(text, "split") else ""
         lines = []
         current_line = []
         for word in words:
