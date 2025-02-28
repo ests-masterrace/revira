@@ -4,22 +4,38 @@ from AudioHandler import AudioHandler
 from SpeechRecognizer import SpeechRecognizer
 from OllamaConnector import OllamaConnector
 from TextToSpeech import TextToSpeech
+from ConversationConfig import ConversationConfig
+
+import chromadb
+from rag.rag import (
+    EMBED_MODEL,
+    read_txtf,
+    read_pdf,
+    read_png,
+    chunk_splitter,
+    get_embedding,
+)
 
 import time
 import requests
 import re
 import threading
 import pygame
+import tkinter as tk
+from tkinter import filedialog
+import ollama
 
 AUDIO_CONFIG = {
     "CHANNELS": 1,
     "RATE": 16000,
-    "CHUNK": 512  # Reduced chunk size for lower latency
+    "CHUNK": 512,  # Reduced chunk size for lower latency
 }
+
 
 # Main Assistant Class
 class EduTalkAssistant:
     """Main class coordinating all components"""
+
     def __init__(self, config_path=None):
         self.config = ConfigLoader.load(config_path)
         self.audio_handler = AudioHandler()
@@ -32,6 +48,7 @@ class EduTalkAssistant:
         self.is_recording = False
         self.speech_thread = None
         self.has_shutdown = False
+        self.tt_data = "No timetable data."
 
     def status_update(self, message):
         print(f"\t:> {message}")
@@ -59,52 +76,56 @@ class EduTalkAssistant:
             self.ui.set_recording(True)
             self.audio_handler.start_recording()
 
-
     def stop_recording(self):
         if self.is_recording:
             self.is_recording = False
             self.ui.set_recording(False)
             self.ui.display_message(self.config.messages.processing)
             audio_data = self.audio_handler.stop_recording()
-            
+
             if len(audio_data) < AUDIO_CONFIG["RATE"] * 0.5:
                 self.ui.display_message(self.config.messages.no_audio)
                 time.sleep(1)
                 self.ui.display_message(self.config.messages.ready)
                 return
-            
+
             self.ui.display_message(self.config.messages.processing)
             transcription = self.speech_recognizer.transcribe(audio_data)
-            print(f"Transcription result: '{transcription}'")  # Debug output
+            # DEBUG
+            # print(f"Transcription result: '{transcription}'")
             if not transcription or transcription.startswith("Error:"):
                 self.ui.display_message("Couldn't understand audio")
                 time.sleep(2)
                 self.ui.display_message(self.config.messages.ready)
                 return
-            self.generate_response(transcription)
+
+            chromaclient = chromadb.HttpClient(host="localhost", port=8000)
+            collection = chromaclient.get_or_create_collection(name="user_tt")
+
+            queryembed = ollama.embed(model=EMBED_MODEL, input=transcription)["embeddings"]
+
+            self.tt_data = "\n\n".join(
+                collection.query(query_embeddings=queryembed, n_results=10)[
+                    "documents"
+                ][0]
+            )
+            self.tt_data = "[Timetable data:\n" + self.tt_data + "]"
+            sys_prompt = ConversationConfig.system_prompt
+            prompt = sys_prompt.replace("<query>", transcription)
+            prompt = re.sub(r"\[(.*?)\]", self.tt_data, prompt, count=1)
+            self.generate_response(prompt)
 
     def speak_chunk(self, text_chunk):
         self.ui.set_speaking(True)
         self.ui.display_message(text_chunk)
         self.tts.speak(text_chunk, self.ui.display_waveform)
 
-
     def generate_response(self, user_input):
         """Generates a response using the Ollama API."""
 
         def response_thread():
             self.ui.set_speaking(True)
-
             full_response = self.ollama.generate_response(user_input, self.speak_chunk)
-            full_response = re.sub(
-                r"<think>.*?</think>",
-                "",
-                full_response,
-                flags=re.DOTALL
-            ) # rm the <think> part if exists
-
-            print(full_response)
-
             self.ui.set_speaking(False)
             self.ui.display_message(full_response)
             time.sleep(1)
@@ -114,11 +135,17 @@ class EduTalkAssistant:
         self.speech_thread.daemon = True
         self.speech_thread.start()
 
-    
     def stop_speaking(self):
         if self.ui.is_speaking:
             self.tts.stop()
             self.ui.set_speaking(False)
+
+    def upload_file(self):
+        root = tk.Tk()
+        root.withdraw()  # Hide the main window
+        file_path = filedialog.askopenfilename(title="Select timetable file...")
+        root.destroy()
+        return file_path
 
     def run(self):
         if not self.initialize():
@@ -137,24 +164,75 @@ class EduTalkAssistant:
                 self.stop_recording()
             elif action == "stop_speaking":
                 self.stop_speaking()
+            elif action == "upload_file":
+                print("Upload img/pdf file...")
+                path = self.upload_file()
+                if path:
+                    print(f">>>> Selected file: {path}")
+                    if path:  # TODO: Make a separate function
+                        chromaclient = chromadb.HttpClient(host="localhost", port=8000)
+                        text_content = ""
+                        if path.endswith(".pdf"):
+                            text_content = read_pdf(path)
+                        elif path.endswith(".txt"):
+                            text_content = read_txtf(path)
+                        elif path.endswith(".png"):
+                            text_content = read_png(path)
+                        else:
+                            print(">>>> Selected file is not supported.")
+                            print(">>>>\tSupported filetypes are: PDF, PNG, TXT.")
 
-#    def shutdown(self):
-#        self.is_running = False
-#        if hasattr(self, 'tts'):
-#            self.tts.stop()
-#        if hasattr(self, 'audio_handler'):
-#            self.audio_handler.cleanup()
-#        pygame.quit()
-#        print(self.config.messages.exit_message)
+                        if text_content:
+                            # collection = chromaclient.get_or_create_collection(
+                            #     name="user_tt",
+                            #     metadata={"hnsw:space": "cosine"},
+                            # )
+                            # if any(
+                            #     coll.name == "user_tt"
+                            #     for coll in chromaclient.list_collections()
+                            # ):
+                            #     chromaclient.delete_collection("user_tt")
+                            #     collection = chromaclient.get_or_create_collection(
+                            #         name="user_tt",
+                            #         metadata={"hnsw:space": "cosine"},
+                            #     )
+
+                            collection = chromaclient.get_or_create_collection(
+                                name="user_tt",
+                                metadata={"hnsw:space": "cosine"},
+                            )
+                            try:
+                                chromaclient.get_collection("user_tt")
+                                chromaclient.delete_collection("user_tt")
+                                collection = chromaclient.get_or_create_collection(
+                                    name="user_tt",
+                                    metadata={"hnsw:space": "cosine"},
+                                )
+                            except ValueError:
+                                pass
+
+                            chunks = chunk_splitter(text_content)
+                            embeds = get_embedding(chunks)
+                            chunknumber = list(range(len(chunks)))
+                            ids = [f"tt_{path}_{i}" for i in chunknumber]
+                            metadatas = [{"source": path} for _ in chunknumber]
+
+                            collection.add(
+                                ids=ids,
+                                documents=chunks,
+                                embeddings=embeds,
+                                metadatas=metadatas,
+                            )
+                            print(f"embedding the the file: '{path}' with success.")
 
     def shutdown(self):
         if self.has_shutdown:
             return  # Skip if already shut down
         self.has_shutdown = True  # Mark as shut down
         self.is_running = False
-        if hasattr(self, 'tts'):
+        if hasattr(self, "tts"):
             self.tts.stop()  # Stop text-to-speech
-        if hasattr(self, 'audio_handler'):
+        if hasattr(self, "audio_handler"):
             self.audio_handler.cleanup()  # Clean up audio resources
         pygame.quit()  # Uninitialize Pygame
         print(self.config.messages.exit_message)  # Display exit message

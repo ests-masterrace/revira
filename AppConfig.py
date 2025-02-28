@@ -5,6 +5,7 @@ from MessagesConfig import MessagesConfig
 from ConversationConfig import ConversationConfig
 from dataclasses import dataclass, field
 
+
 @dataclass
 class AppConfig:
     whisper: WhisperConfig = field(default_factory=WhisperConfig)

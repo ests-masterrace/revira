@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class MessagesConfig:
     welcome: str = "Welcome to EduTalk, your AI voice assistant for learning. Press space to start speaking."

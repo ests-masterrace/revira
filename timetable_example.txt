@@ -1,0 +1,39 @@
+Computer Science Student Timetable
+==================================
+Monday
+  09:00 - 10:30 | Data Structures
+  11:00 - 12:30 | Algorithms
+  13:30 - 15:00 | Programming Lab
+  15:30 - 17:00 | Self-Study / Projects
+
+Tuesday
+  09:00 - 10:30 | Operating Systems
+  11:00 - 12:30 | Database Systems
+  13:30 - 15:00 | Study Group / Assignments
+  15:30 - 17:00 | Self-Study / Coding Practice
+
+Wednesday
+  09:00 - 10:30 | Computer Networks
+  11:00 - 12:30 | Software Engineering
+  13:30 - 15:00 | Lab Session (Networks)
+  15:30 - 17:00 | Self-Study / Research
+
+Thursday
+  09:00 - 10:30 | Data Structures
+  11:00 - 12:30 | Algorithms
+  13:30 - 15:00 | Programming Lab
+  15:30 - 17:00 | Self-Study / Projects
+
+Friday
+  09:00 - 10:30 | Operating Systems
+  11:00 - 12:30 | Database Systems
+  13:30 - 15:00 | Weekly Review / Catch-Up
+  15:30 - 17:00 | Self-Study / Coding Challenges
+
+Saturday
+  10:00 - 13:00 | Project Work / Group Coding
+  14:00 - 16:00 | Self-Study / Optional Topics
+
+Sunday
+  10:00 - 12:00 | Revision / Recap
+  13:00 - 15:00 | Free Time or Extra Study

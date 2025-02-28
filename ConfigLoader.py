@@ -9,8 +9,10 @@ DEFAULT_PATHS = {
     "ICON": "image.png",
 }
 
+
 class ConfigLoader:
     """Handles loading and processing configuration"""
+
     @staticmethod
     def load(config_path=None):
         config = AppConfig()
@@ -18,7 +20,7 @@ class ConfigLoader:
             config_path = DEFAULT_PATHS["CONFIG"]
         if os.path.exists(config_path):
             try:
-                with open(config_path, 'r', encoding='utf-8') as stream:
+                with open(config_path, "r", encoding="utf-8") as stream:
                     yaml_config = yaml.load(stream, Loader=Loader)
                 ConfigLoader._update_from_dict(config, yaml_config)
             except Exception as e:
@@ -32,7 +34,7 @@ class ConfigLoader:
         for key, value in data.items():
             if hasattr(obj, key):
                 attr = getattr(obj, key)
-                if hasattr(attr, '__dict__') and isinstance(value, dict):
+                if hasattr(attr, "__dict__") and isinstance(value, dict):
                     ConfigLoader._update_from_dict(attr, value)
                 else:
                     setattr(obj, key, value)
