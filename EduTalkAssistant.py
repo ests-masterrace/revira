@@ -102,7 +102,9 @@ class EduTalkAssistant:
             chromaclient = chromadb.HttpClient(host="localhost", port=8000)
             collection = chromaclient.get_or_create_collection(name="user_tt")
 
-            queryembed = ollama.embed(model=EMBED_MODEL, input=transcription)["embeddings"]
+            queryembed = ollama.embed(model=EMBED_MODEL, input=transcription)[
+                "embeddings"
+            ]
 
             self.tt_data = "\n\n".join(
                 collection.query(query_embeddings=queryembed, n_results=10)[
