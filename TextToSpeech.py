@@ -4,8 +4,10 @@ import tempfile
 import numpy as np
 import os
 
+
 class TextToSpeech:
     """Handles text-to-speech functionality using gTTS and Pygame mixer"""
+
     def __init__(self, config):
         self.config = config
 
@@ -13,8 +15,8 @@ class TextToSpeech:
         if not text:
             return
         try:
-            tts = gtts.gTTS(text=text, lang='en')
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+            tts = gtts.gTTS(text=text, lang="en")
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
             temp_file.close()
             tts.save(temp_file.name)
             pygame.mixer.music.load(temp_file.name)

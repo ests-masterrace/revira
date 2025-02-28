@@ -16,7 +16,7 @@ def read_png(path, delim="|") -> str:
 
 
 # TODO: Handle image based PDFs
-def read_pdf(path, delim: str="#") -> str:
+def read_pdf(path, delim: str = "#") -> str:
     text: str = ""
     reader = PdfReader(path)
     i = 1
