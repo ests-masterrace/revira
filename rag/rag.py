@@ -3,16 +3,16 @@ import re
 import ollama
 from pypdf import PdfReader
 
-import easyocr
+# import easyocr
 
 EMBED_MODEL = "nomic-embed-text"
 
 
-def read_png(path, delim="|") -> str:
-    reader = easyocr.Reader(["en"])
-    result = reader.readtext(path)
-    text = [item[1] for item in result]
-    return delim.join(text)
+# def read_png(path, delim="|") -> str:
+#     reader = easyocr.Reader(["en"])
+#     result = reader.readtext(path)
+#     text = [item[1] for item in result]
+#     return delim.join(text)
 
 
 # TODO: Handle image based PDFs

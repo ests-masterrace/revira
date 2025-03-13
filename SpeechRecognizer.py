@@ -11,7 +11,7 @@ class SpeechRecognizer:
 
     def load_model(self):
         try:
-            self.model = whisper.load_model(self.config.whisper.model_path)
+            self.model = whisper.load_model(self.config.get_value("whisper", "model_path"))
             return True
         except Exception as e:
             print(f"Error loading Whisper model: {e}")
@@ -23,8 +23,8 @@ class SpeechRecognizer:
         try:
             transcript = self.model.transcribe(
                 audio_data,
-                language=self.config.whisper.lang,
-                fp16=self.config.whisper.use_fp16,
+                language=self.config.get_value("whisper", "lang"),
+                fp16=self.config.get_value("whisper", "use_fp16"),
             )
             return transcript["text"].strip()
         except Exception as e:
