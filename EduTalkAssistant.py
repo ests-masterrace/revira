@@ -5,7 +5,6 @@ from AudioHandler import AudioHandler
 from SpeechRecognizer import SpeechRecognizer
 from OllamaConnector import OllamaConnector
 from TextToSpeech import TextToSpeech
-from ConversationConfig import ConversationConfig
 
 from ConfigParser import ConfigParser
 
@@ -105,7 +104,7 @@ class EduTalkAssistant:
             if not transcription or transcription.startswith("Error:"):
                 self.ui.display_message("Couldn't understand audio")
                 time.sleep(2)
-                self.ui.display_message(self.config.get_value("messages",  "ready"))
+                self.ui.display_message(self.config.get_value("messages", "ready"))
                 return
 
             chromaclient = chromadb.HttpClient(host="localhost", port=8000)
@@ -120,8 +119,8 @@ class EduTalkAssistant:
                     "documents"
                 ][0]
             )
-            self.tt_data = "[Timetable data:\n" + self.tt_data + "]"
-            sys_prompt = ConversationConfig.system_prompt
+            self.tt_data = "[Timetable data:\n" + self.tt_data + "]" # TODO: improve RAG
+            sys_prompt = self.config.get_value("conversation",  "system_prompt")
             prompt = sys_prompt.replace("<query>", transcription)
             prompt = re.sub(r"\[(.*?)\]", self.tt_data, prompt, count=1)
             self.generate_response(prompt)
