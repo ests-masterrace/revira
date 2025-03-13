@@ -1,10 +1,13 @@
 from EduTalkUI import EduTalkUI
-from ConfigLoader import ConfigLoader
+
+# from ConfigLoader import ConfigLoader
 from AudioHandler import AudioHandler
 from SpeechRecognizer import SpeechRecognizer
 from OllamaConnector import OllamaConnector
 from TextToSpeech import TextToSpeech
 from ConversationConfig import ConversationConfig
+
+from ConfigParser import ConfigParser
 
 import chromadb
 from rag.rag import (
@@ -25,7 +28,9 @@ import tkinter as tk
 from tkinter import filedialog
 import ollama
 
-AUDIO_CONFIG = {
+CONFIG_FILEPATH = "config.toml"
+
+AUDIO_CONFIG: dict[str, int] = {
     "CHANNELS": 1,
     "RATE": 16000,
     "CHUNK": 512,  # Reduced chunk size for lower latency
@@ -37,7 +42,8 @@ class EduTalkAssistant:
     """Main class coordinating all components"""
 
     def __init__(self, config_path=None):
-        self.config = ConfigLoader.load(config_path)
+        self.config = ConfigParser(CONFIG_FILEPATH)
+        self.config.read_config()
         self.audio_handler = AudioHandler()
         self.ui = EduTalkUI(self.config, self.status_update, self)
         self.speech_recognizer = SpeechRecognizer(self.config)
@@ -56,18 +62,21 @@ class EduTalkAssistant:
     def initialize(self):
         self.ui.display_message("Loading speech recognition model...")
         if not self.speech_recognizer.load_model():
-            self.ui.display_message(self.config.messages.error_model)
+            self.ui.display_message(self.config.get_value("messages", "error_model"))
             time.sleep(3)
             return False
         try:
             self.ui.display_message("Testing connection to language model...")
-            requests.get(self.config.ollama.url.replace("/generate", "/"), timeout=2)
+            requests.get(
+                self.config.get_value("ollama", "url").replace("/generate", "/"),
+                timeout=2,
+            )
         except Exception as e:
             print(e)
-            self.ui.display_message(self.config.messages.error_api)
+            self.ui.display_message(self.config.get_value("messages", "error_api"))
             time.sleep(3)
             return False
-        self.ui.display_message(self.config.messages.ready)
+        self.ui.display_message(self.config.get_value("messages", "ready"))
         return True
 
     def start_recording(self):
@@ -80,23 +89,23 @@ class EduTalkAssistant:
         if self.is_recording:
             self.is_recording = False
             self.ui.set_recording(False)
-            self.ui.display_message(self.config.messages.processing)
+            self.ui.display_message(self.config.get_value("messages", "processing"))
             audio_data = self.audio_handler.stop_recording()
 
             if len(audio_data) < AUDIO_CONFIG["RATE"] * 0.5:
-                self.ui.display_message(self.config.messages.no_audio)
+                self.ui.display_message(self.config.get_value("messages", "no_audio"))
                 time.sleep(1)
-                self.ui.display_message(self.config.messages.ready)
+                self.ui.display_message(self.config.get_value("messages", "ready"))
                 return
 
-            self.ui.display_message(self.config.messages.processing)
+            self.ui.display_message(self.config.get_value("messages", "processing"))
             transcription = self.speech_recognizer.transcribe(audio_data)
             # DEBUG
             # print(f"Transcription result: '{transcription}'")
             if not transcription or transcription.startswith("Error:"):
                 self.ui.display_message("Couldn't understand audio")
                 time.sleep(2)
-                self.ui.display_message(self.config.messages.ready)
+                self.ui.display_message(self.config.get_value("messages",  "ready"))
                 return
 
             chromaclient = chromadb.HttpClient(host="localhost", port=8000)
@@ -131,7 +140,7 @@ class EduTalkAssistant:
             self.ui.set_speaking(False)
             self.ui.display_message(full_response)
             time.sleep(1)
-            self.ui.display_message(self.config.messages.ready)
+            self.ui.display_message(self.config.get_value("messages", "ready"))
 
         self.speech_thread = threading.Thread(target=response_thread)
         self.speech_thread.daemon = True
@@ -178,8 +187,8 @@ class EduTalkAssistant:
                             text_content = read_pdf(path)
                         elif path.endswith(".txt"):
                             text_content = read_txtf(path)
-                        elif path.endswith(".png"):
-                            text_content = read_png(path)
+                        # elif path.endswith(".png"):
+                        #     text_content = read_png(path)
                         else:
                             print(">>>> Selected file is not supported.")
                             print(">>>>\tSupported filetypes are: PDF, PNG, TXT.")
@@ -237,4 +246,4 @@ class EduTalkAssistant:
         if hasattr(self, "audio_handler"):
             self.audio_handler.cleanup()  # Clean up audio resources
         pygame.quit()  # Uninitialize Pygame
-        print(self.config.messages.exit_message)  # Display exit message
+        print(self.config.get_value("messages", "exit_message"))  # Display exit message

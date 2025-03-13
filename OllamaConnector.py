@@ -14,16 +14,16 @@ class OllamaConnector:
             if not prompt.strip():
                 return "I couldn't hear anything. Please try again."
             payload = {
-                "model": self.config.ollama.model,
+                "model": self.config.get_value("ollama", "model"),
                 "stream": True,
                 "context": self.context,
                 "prompt": prompt,
                 # "system": self.config.conversation.system_prompt,
             }
             response = requests.post(
-                self.config.ollama.url,
+                self.config.get_value("ollama", "url"),
                 json=payload,
-                headers=self.config.ollama.headers,
+                headers=self.config.get_value("ollama", "headers"),
                 stream=True,
             )
             response.raise_for_status()
@@ -50,7 +50,7 @@ class OllamaConnector:
                         sentence_buffer += token
                         full_response += token
 
-                    if token in [".", "!", "?", ":"]:
+                    if token in [".", "!", "?", ":"]: # TODO: ignore emojies
                         if callback and sentence_buffer:
                             callback(sentence_buffer)
                             sentence_buffer = ""

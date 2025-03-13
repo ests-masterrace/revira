@@ -1,0 +1,38 @@
+[tts]
+rate = 145
+volume = 1.0
+voice_preference = "english"
+
+[messages]
+welcome = "Welcome to EduTalk, your AI voice assistant for learning. Press space to start speaking."
+loading = "Loading models. Please wait a moment..."
+ready = "Ready! Press space to speak and release when done."
+processing = "Processing your question..."
+no_audio = "No speech detected. Please try again."
+error_model = "Error loading model. Please check your installation."
+error_api = "Couldn't connect to the language model. Is Ollama running?"
+exit_message = "Thank you for using EduTalk. Goodbye!"
+flashcard_created = "Flashcard created for {}"
+
+[whisper]
+model_path = "base" # tiny
+lang = "en"
+use_fp16 = false
+device = "cpu"      # 'cpu' or 'cuda'
+
+[ollama]
+url = "http://localhost:11434/api/generate"
+model = "deepseek-r1:1.5b"
+headers = '{"Content-Type": "application/json"}'
+
+[conversation]
+system_prompt = """
+You are EduTalk, an educational AI assistant.
+Use the provided timetable to answer questions about schedules and topics.
+For concept explanations, provide clear and concise answers, relating to the timetable when relevant.
+Keep responses short unless more detail is requested.
+
+Question: <query>
+Timetable: [tt]
+"""
+max_context_length = 4096

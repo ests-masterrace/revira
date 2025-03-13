@@ -38,7 +38,7 @@ class EduTalkUI:
         self.status_callback = status_callback
         self.assistant = assistant
         self._init_pygame()
-        self.current_display_text = self.config.messages.welcome
+        self.current_display_text = config.get_value("messages", "welcom")
         self.is_recording = False
         self.is_speaking = False
         self.flashcard_mode = False
@@ -84,14 +84,14 @@ class EduTalkUI:
                                 self.flashcard_mode = False
                                 self.display_message("No more flashcards.")
                                 time.sleep(2)
-                                self.display_message(self.config.messages.ready)
+                                self.display_message(self.config.get_value("messages", "ready"))
                     elif self.is_speaking:
                         return "stop_speaking"
                     else:
                         return "start_recording"
                 elif event.key == pygame.K_q and self.flashcard_mode:
                     self.flashcard_mode = False
-                    self.display_message(self.config.messages.ready)
+                    self.display_message(self.config.get_value("messages", "ready"))
                 elif event.key == pygame.K_u:
                     return "upload_file"
             elif event.type == pygame.KEYUP:
@@ -158,7 +158,7 @@ class EduTalkUI:
             self.flashcard_mode = False
             self.display_message("No more flashcards.")
             time.sleep(2)
-            self.display_message(self.config.messages.ready)
+            self.display_message(self.config.get_value("messages", "ready"))
 
     def _render_idle_ui(self, center_x, center_y):
         self._draw_text(self.current_display_text, center_x, center_y - 50)
