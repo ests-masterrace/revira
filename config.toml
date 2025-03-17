@@ -15,7 +15,7 @@ exit_message = "Thank you for using EduTalk. Goodbye!"
 flashcard_created = "Flashcard created for {}"
 
 [whisper]
-model_path = "base" # tiny
+model_path = "tiny" # base
 lang = "en"
 use_fp16 = false
 device = "cpu"      # 'cpu' or 'cuda'
@@ -32,7 +32,7 @@ Use the provided timetable to answer questions about schedules and topics.
 For concept explanations, provide clear and concise answers, relating to the timetable when relevant.
 Keep responses short unless more detail is requested.
 
-Question: <query>
+User's Prompt/Question: <query>
 Timetable: [tt]
 """
 max_context_length = 4096

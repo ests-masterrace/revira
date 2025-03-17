@@ -1,3 +1,4 @@
+import argparse
 from EduTalkUI import EduTalkUI
 
 # from ConfigLoader import ConfigLoader
@@ -6,6 +7,8 @@ from SpeechRecognizer import SpeechRecognizer
 from TextToSpeech import TextToSpeech
 
 from ConfigParser import ConfigParser
+
+import argparse
 
 import chromadb
 from rag.rag import (
@@ -44,17 +47,21 @@ def main():
     stt = SpeechRecognizer(config)
     tts = TextToSpeech(config)
 
-    ollama_client = Client(host="http://localhost:11434")
+    ollama_client = Client(
+        host="http://localhost:11434", headers={"Content-Type": "application/json"}
+    )
 
     modelname = config.get_value("ollama", "model")
+    print(f"modelname={modelname}")
 
     is_running = True
     is_recording = False
 
-    ui.display_message("Loading speech recognition model...")
     if not stt.load_model():
         ui.display_message(config.get_value("messages", "error_model"))
     ui.display_message(config.get_value("messages", "ready"))
+    ui.display_message("Loading speech recognition model...")
+    tts.speak("Loading speech recognition model...")
 
     while is_running:
         if is_recording:
@@ -102,23 +109,12 @@ def main():
             stream = ollama_client.chat(
                 model=modelname,
                 messages=[{"role": "user", "content": prompt}],
-                stream=True,
+                stream=False,
             )
 
-            in_think = False
-            for chunk in stream:
-                token = chunk["message"]["content"]
-
-            if "<think>" in token:
-                in_think = True  # Start ignoring tokens
-                continue
-            if "</think>" in token:
-                in_think = False  # Stop ignoring tokens
-                continue
-
-            if not in_think:  # Only append if not in <think> mode
-                print(token, end="", flush=True)
-                tts.speak(token.encode("ascii", "ignore").decode())
+            response = stream["message"]["content"].encode("ascii", "ignore").decode()
+            # print(response)
+            tts.speak(response, speed=1.30)
 
         elif action == "stop_speaking":
             tts.stop()
@@ -175,5 +171,75 @@ def main():
     pygame.quit()
 
 
+def text_mode(text: str):
+    config = ConfigParser(CONFIG_FILEPATH)
+    config.read_config()
+    # ui = EduTalkUI(config)
+    # audio = AudioHandler()
+    # stt = SpeechRecognizer(config)
+    tts = TextToSpeech(config)
+
+    ollama_client = Client(host="http://localhost:11434")
+
+    modelname = config.get_value("ollama", "model")
+
+    chromaclient = chromadb.HttpClient(host="localhost", port=8000)
+    collection = chromaclient.get_or_create_collection(name="user_tt")
+
+    queryembed = embed(model=EMBED_MODEL, input=text)["embeddings"]
+
+    tt_data = "\n\n".join(
+        collection.query(query_embeddings=queryembed, n_results=10)["documents"][0]
+    )
+
+    tt_data = "[Timetable data:\n" + tt_data + "]"  # TODO: improve RAG
+    sys_prompt = config.get_value("conversation", "system_prompt")
+    prompt = sys_prompt.replace("<query>", text)
+    prompt = re.sub(r"\[(.*?)\]", tt_data, prompt, count=1)
+    print("\n\n")
+
+    print(prompt, end="\n\n")
+
+    stream = ollama_client.chat(
+        model=modelname,
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+    )
+
+    # in_think = False
+    for chunk in stream:
+        token = chunk["message"]["content"].encode("ascii", "ignore").decode()
+        print(token, end="", flush=True)
+        tts.speak(token)
+
+        # NOTE: for thinker models
+        # if "<think>" in token:
+        #     in_think = True  # Start ignoring tokens
+        #     continue
+
+        # if "</think>" in token:
+        #     in_think = False  # Stop ignoring tokens
+        #     continue
+
+        # if not in_think:  # Only append if not in <think> mode
+        #     print(token, end="", flush=True)
+        #     tts.speak(token.encode("ascii", "ignore").decode())
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Edutalk cli")
+    parser.add_argument(
+        "-t",
+        "--text",
+        required=False,
+        help="user's prompt",
+    )
+
+    args = parser.parse_args()
+
+    if args.text is not None:
+        if args.text.strip() == "":
+            parser.error("--text requires a non-empty argument")
+        text_mode(args.text)
+    else:
+        main()
