@@ -61,7 +61,7 @@ def main():
         ui.display_message(config.get_value("messages", "error_model"))
     ui.display_message(config.get_value("messages", "ready"))
     ui.display_message("Loading speech recognition model...")
-    tts.speak("Loading speech recognition model...")
+    tts.speak("Loading speech recognition model...", speed=1.3)
 
     while is_running:
         if is_recording:
@@ -98,7 +98,8 @@ def main():
                     "documents"
                 ][0]
             )
-            tt_data = "[Timetable data:\n" + tt_data + "]"  # TODO: improve RAG
+
+            tt_data = "[Timetable data:\n" + tt_data + "]" if tt_data else "No timetable data."
             sys_prompt = config.get_value("conversation", "system_prompt")
             prompt = sys_prompt.replace("<query>", transcription)
             prompt = re.sub(r"\[(.*?)\]", tt_data, prompt, count=1)
@@ -174,9 +175,6 @@ def main():
 def text_mode(text: str):
     config = ConfigParser(CONFIG_FILEPATH)
     config.read_config()
-    # ui = EduTalkUI(config)
-    # audio = AudioHandler()
-    # stt = SpeechRecognizer(config)
     tts = TextToSpeech(config)
 
     ollama_client = Client(host="http://localhost:11434")
@@ -192,7 +190,7 @@ def text_mode(text: str):
         collection.query(query_embeddings=queryembed, n_results=10)["documents"][0]
     )
 
-    tt_data = "[Timetable data:\n" + tt_data + "]"  # TODO: improve RAG
+    tt_data = "[Timetable data:\n" + tt_data + "]"
     sys_prompt = config.get_value("conversation", "system_prompt")
     prompt = sys_prompt.replace("<query>", text)
     prompt = re.sub(r"\[(.*?)\]", tt_data, prompt, count=1)
@@ -206,25 +204,10 @@ def text_mode(text: str):
         stream=True,
     )
 
-    # in_think = False
     for chunk in stream:
         token = chunk["message"]["content"].encode("ascii", "ignore").decode()
         print(token, end="", flush=True)
         tts.speak(token)
-
-        # NOTE: for thinker models
-        # if "<think>" in token:
-        #     in_think = True  # Start ignoring tokens
-        #     continue
-
-        # if "</think>" in token:
-        #     in_think = False  # Stop ignoring tokens
-        #     continue
-
-        # if not in_think:  # Only append if not in <think> mode
-        #     print(token, end="", flush=True)
-        #     tts.speak(token.encode("ascii", "ignore").decode())
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Edutalk cli")
