@@ -22,7 +22,7 @@ device = "cpu"      # 'cpu' or 'cuda'
 
 [ollama]
 url = "http://localhost:11434/api/generate"
-model = "deepseek-r1:1.5b"
+model = "gemma3:1b" # "deepseek-r1:1.5b"
 headers = '{"Content-Type": "application/json"}'
 
 [conversation]

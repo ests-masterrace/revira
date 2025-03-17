@@ -44,7 +44,7 @@ class EduTalkAssistant:
         self.config = ConfigParser(CONFIG_FILEPATH)
         self.config.read_config()
         self.audio_handler = AudioHandler()
-        self.ui = EduTalkUI(self.config, self.status_update, self)
+        self.ui = EduTalkUI(self.config)
         self.speech_recognizer = SpeechRecognizer(self.config)
         self.ollama = OllamaConnector(self.config)
         self.tts = TextToSpeech(self.config)
@@ -62,10 +62,11 @@ class EduTalkAssistant:
         self.ui.display_message("Loading speech recognition model...")
         if not self.speech_recognizer.load_model():
             self.ui.display_message(self.config.get_value("messages", "error_model"))
-            time.sleep(3)
+            # time.sleep(3) # DEBUG: useful?
             return False
         try:
             self.ui.display_message("Testing connection to language model...")
+            # TODO: use ollama.generate or .chat instead
             requests.get(
                 self.config.get_value("ollama", "url").replace("/generate", "/"),
                 timeout=2,
@@ -73,7 +74,7 @@ class EduTalkAssistant:
         except Exception as e:
             print(e)
             self.ui.display_message(self.config.get_value("messages", "error_api"))
-            time.sleep(3)
+            # time.sleep(3) # DEBUG: useful?
             return False
         self.ui.display_message(self.config.get_value("messages", "ready"))
         return True
@@ -93,17 +94,17 @@ class EduTalkAssistant:
 
             if len(audio_data) < AUDIO_CONFIG["RATE"] * 0.5:
                 self.ui.display_message(self.config.get_value("messages", "no_audio"))
-                time.sleep(1)
+                # time.sleep(1) # DEBUG: useful?
                 self.ui.display_message(self.config.get_value("messages", "ready"))
                 return
 
             self.ui.display_message(self.config.get_value("messages", "processing"))
             transcription = self.speech_recognizer.transcribe(audio_data)
             # DEBUG
-            # print(f"Transcription result: '{transcription}'")
+            print(f"Transcription result: '{transcription}'")
             if not transcription or transcription.startswith("Error:"):
                 self.ui.display_message("Couldn't understand audio")
-                time.sleep(2)
+                # time.sleep(2) # DEBUG: useful?
                 self.ui.display_message(self.config.get_value("messages", "ready"))
                 return
 
@@ -119,8 +120,10 @@ class EduTalkAssistant:
                     "documents"
                 ][0]
             )
-            self.tt_data = "[Timetable data:\n" + self.tt_data + "]" # TODO: improve RAG
-            sys_prompt = self.config.get_value("conversation",  "system_prompt")
+            self.tt_data = (
+                "[Timetable data:\n" + self.tt_data + "]"
+            )  # TODO: improve RAG
+            sys_prompt = self.config.get_value("conversation", "system_prompt")
             prompt = sys_prompt.replace("<query>", transcription)
             prompt = re.sub(r"\[(.*?)\]", self.tt_data, prompt, count=1)
             self.generate_response(prompt)
@@ -186,8 +189,8 @@ class EduTalkAssistant:
                             text_content = read_pdf(path)
                         elif path.endswith(".txt"):
                             text_content = read_txtf(path)
-                        # elif path.endswith(".png"):
-                        #     text_content = read_png(path)
+                        elif path.endswith(".png"):
+                            text_content = read_png(path)
                         else:
                             print(">>>> Selected file is not supported.")
                             print(">>>>\tSupported filetypes are: PDF, PNG, TXT.")

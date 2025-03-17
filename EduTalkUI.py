@@ -33,15 +33,15 @@ COLORS = {
 class EduTalkUI:
     """Handles the user interface for the EduTalk assistant"""
 
-    def __init__(self, config, status_callback, assistant):
+    # def __init__(self, config, assistant):
+    def __init__(self, config):
         self.config = config
-        self.status_callback = status_callback
-        self.assistant = assistant
+        self.assistant = None
         self._init_pygame()
         self.current_display_text = config.get_value("messages", "welcom")
         self.is_recording = False
         self.is_speaking = False
-        self.flashcard_mode = False
+        self.flashcard_mode = False # NOTE: not used for now
         self.current_flashcard = 0
         self.show_answer = False
 
@@ -74,24 +74,10 @@ class EduTalkUI:
                 if event.key == pygame.K_ESCAPE:
                     return "quit"
                 elif event.key == pygame.K_SPACE:
-                    if self.flashcard_mode:
-                        if not self.show_answer:
-                            self.show_answer = True
-                        else:
-                            self.current_flashcard += 1
-                            self.show_answer = False
-                            if self.current_flashcard >= len(self.assistant.flashcards):
-                                self.flashcard_mode = False
-                                self.display_message("No more flashcards.")
-                                time.sleep(2)
-                                self.display_message(self.config.get_value("messages", "ready"))
-                    elif self.is_speaking:
+                    if self.is_speaking:
                         return "stop_speaking"
                     else:
                         return "start_recording"
-                elif event.key == pygame.K_q and self.flashcard_mode:
-                    self.flashcard_mode = False
-                    self.display_message(self.config.get_value("messages", "ready"))
                 elif event.key == pygame.K_u:
                     return "upload_file"
             elif event.type == pygame.KEYUP:
@@ -121,9 +107,7 @@ class EduTalkUI:
         width, height = self.window.get_size()
         center_x, center_y = width // 2, height // 2
 
-        if self.flashcard_mode:
-            self._render_flashcard_ui(center_x, center_y)
-        elif self.is_recording:
+        if self.is_recording:
             self._render_recording_ui(center_x, center_y)
         elif self.is_speaking:
             self._render_speaking_ui(center_x, center_y)
@@ -132,33 +116,6 @@ class EduTalkUI:
 
         self._render_hangup_button(center_x, center_y)
         pygame.display.flip()
-
-    def _render_flashcard_ui(self, center_x, center_y):
-        if self.current_flashcard < len(self.assistant.flashcards):
-            flashcard = self.assistant.flashcards[self.current_flashcard]
-            text = (
-                f"Question: {flashcard['question']}"
-                if not self.show_answer
-                else f"Answer: {flashcard['answer']}"
-            )
-            self._draw_text(text, center_x, center_y - 50)
-            instruction = (
-                "Press Space to reveal answer"
-                if not self.show_answer
-                else "Press Space for next"
-            )
-            self._draw_text(
-                instruction,
-                center_x,
-                center_y + 100,
-                font=self.small_font,
-                color=COLORS["TEXT_SECONDARY"],
-            )
-        else:
-            self.flashcard_mode = False
-            self.display_message("No more flashcards.")
-            time.sleep(2)
-            self.display_message(self.config.get_value("messages", "ready"))
 
     def _render_idle_ui(self, center_x, center_y):
         self._draw_text(self.current_display_text, center_x, center_y - 50)
@@ -232,8 +189,7 @@ class EduTalkUI:
 
     def display_message(self, text):
         self.current_display_text = text
-        if self.status_callback:
-            self.status_callback(text)
+        print(text)
 
     def display_waveform(self, audio_data):
         width, height = self.window.get_size()

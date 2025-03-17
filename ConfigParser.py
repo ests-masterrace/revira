@@ -3,6 +3,8 @@ import tomllib
 from pathlib import Path
 
 
+# TODO: enhance errors handling
+
 class ConfigParser:
     """Custom class to read and write TOML configuration files."""
 
